@@ -3,6 +3,7 @@ package service
 import (
 		"crypto/sha256"
     "net/http"
+		"unicode/utf8"
  
     "github.com/gin-gonic/gin"
 		database "todolist.go/db"
@@ -24,15 +25,38 @@ func RegisterUser(ctx *gin.Context) {
 	// フォームデータの受け取り
 	username := ctx.PostForm("username")
 	password := ctx.PostForm("password")
-	if username == "" || password == "" {
-			Error(http.StatusBadRequest, "Empty parameter")(ctx)
+	password_confirm := ctx.PostForm("password_confirm")
+	switch {
+	case username == "":
+			ctx.HTML(http.StatusBadRequest, "new_user_form.html", gin.H{"Title": "Register user", "Error": "Username is not provided", "Username": username, "Password": password, "PasswordConfirm": password_confirm})
 			return
+	case password == "":
+			ctx.HTML(http.StatusBadRequest, "new_user_form.html", gin.H{"Title": "Register user", "Error": "Password is not provided", "Username": username, "Password": password, "PasswordConfirm": password_confirm})
+			return
+	case password != password_confirm:
+		ctx.HTML(http.StatusBadRequest, "new_user_form.html", gin.H{"Title": "Register user", "Error": "Password confirmation is not same ", "Username": username, "Password": password, "PasswordConfirm": password_confirm})
+		return
+	case utf8.RuneCountInString(password) < 6:
+		ctx.HTML(http.StatusBadRequest, "new_user_form.html", gin.H{"Title": "Register user", "Error": "Password is too short. Set Password more than 5 chars.", "Username": username, "Password": password, "PasswordConfirm": password_confirm})
+		return
 	}
 	
 	// DB 接続
 	db, err := database.GetConnection()
 	if err != nil {
 			Error(http.StatusInternalServerError, err.Error())(ctx)
+			return
+	}
+ 
+	// 重複チェック
+	var duplicate int
+	err = db.Get(&duplicate, "SELECT COUNT(*) FROM users WHERE name=?", username)
+	if err != nil {
+			Error(http.StatusInternalServerError, err.Error())(ctx)
+			return
+	}
+	if duplicate > 0 {
+			ctx.HTML(http.StatusBadRequest, "new_user_form.html", gin.H{"Title": "Register user", "Error": "Username is already taken", "Username": username, "Password": password})
 			return
 	}
 
