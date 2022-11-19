@@ -18,16 +18,45 @@ func TaskList(ctx *gin.Context) {
 		return
 	}
 
-	// Get tasks in DB
-	var tasks []database.Task
-	err = db.Select(&tasks, "SELECT * FROM tasks") // Use DB#Select for multiple entries
-	if err != nil {
-		Error(http.StatusInternalServerError, err.Error())(ctx)
-		return
-	}
+    // Get query parameter
+    kw := ctx.Query("kw")
 
-	// Render tasks
-	ctx.HTML(http.StatusOK, "task_list.html", gin.H{"Title": "Task list", "Tasks": tasks})
+		str_is_done := ctx.Query("is_done")
+		str_is_not_done := ctx.Query("is_not_done")
+ 
+    // Get tasks in DB
+    var tasks []database.Task
+    switch {
+    case kw != "":
+				switch{
+				case str_is_done != "" && str_is_not_done != "":
+					err = db.Select(&tasks, "SELECT * FROM tasks WHERE title LIKE ?", "%" + kw + "%")
+				case str_is_done != "":
+					err = db.Select(&tasks, "SELECT * FROM tasks WHERE title LIKE ? AND is_done = ?", "%" + kw + "%", true)
+				case str_is_not_done != "":
+					err = db.Select(&tasks, "SELECT * FROM tasks WHERE title LIKE ? AND is_done = ?", "%" + kw + "%", false)
+				default:        
+					err = db.Select(&tasks, "SELECT * FROM tasks WHERE title LIKE ?", "%" + kw + "%")
+				}
+    default:
+			switch{
+			case str_is_done != "" && str_is_not_done != "":
+        err = db.Select(&tasks, "SELECT * FROM tasks")
+			case str_is_done != "":
+        err = db.Select(&tasks, "SELECT * FROM tasks WHERE is_done = ?", true)
+			case str_is_not_done != "":
+        err = db.Select(&tasks, "SELECT * FROM tasks WHERE is_done = ?", false)
+			default:
+        err = db.Select(&tasks, "SELECT * FROM tasks")
+			}
+    }
+    if err != nil {
+        Error(http.StatusInternalServerError, err.Error())(ctx)
+        return
+    }
+ 
+    // Render tasks
+    ctx.HTML(http.StatusOK, "task_list.html", gin.H{"Title": "Task list", "Tasks": tasks, "Kw": kw, "IsDone": str_is_done == "checked", "IsNotDone": str_is_not_done == "checked"})
 }
 
 // ShowTask renders a task with given ID
@@ -140,7 +169,7 @@ func UpdateTask(ctx *gin.Context){
 			Error(http.StatusBadRequest, "No comment is given")(ctx)
 			return
 	}
-	// Get task comment
+	// Get task is_done
 	str_is_done, exist := ctx.GetPostForm("is_done")
 	if !exist {
 			Error(http.StatusBadRequest, "No is_done is given")(ctx)
