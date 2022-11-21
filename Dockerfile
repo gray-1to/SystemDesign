@@ -9,4 +9,5 @@ WORKDIR ${WORKSPACE}
 ADD . ${WORKSPACE}
 
 RUN go mod download
-RUN go mod tidy
+# RUN go mod tidy
+RUN go mod tidy -compat=1.17
