@@ -6,6 +6,7 @@ import (
 		"unicode/utf8"
 		"encoding/hex"
 		"strconv"
+		"fmt"
  
     "github.com/gin-gonic/gin"
 		"github.com/gin-contrib/sessions"
@@ -144,11 +145,11 @@ func LoginCheck(ctx *gin.Context) {
 				return
 			}
 
-			var tasks []database.Task
-			db.Select(&tasks, "SELECT * FROM ownership WHERE user_id = ? AND task_id = ?", user_id, int_task_id)
+			var ownerships []database.Ownership
+			db.Select(&ownerships, "SELECT * FROM ownerships WHERE user_id = ? AND task_id = ?", user_id, int_task_id)
 
-			if tasks == nil{
-				ctx.JSON(http.StatusNotFound, "you do not have access right.")
+			if len(ownerships) == 0{
+				ctx.JSON(http.StatusNotFound, fmt.Sprintf("you do not have access right. task_id: %d, user_id: %d", int_task_id, user_id))
 				ctx.Abort()
 			}else{
 				ctx.Next()

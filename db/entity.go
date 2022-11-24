@@ -19,3 +19,8 @@ type User struct {
 	Name      string    `db:"name"`
 	Password  []byte    `db:"password"`
 }
+
+type Ownership struct {
+	User_id uint64 `db:"user_id"`
+	Task_id uint64 `db:"task_id"`
+}

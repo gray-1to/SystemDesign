@@ -23,7 +23,7 @@ CREATE TABLE `users` (
 
 DROP TABLE IF EXISTS `ownership`;
  
-CREATE TABLE `ownership` (
+CREATE TABLE `ownerships` (
     `user_id` bigint(20) NOT NULL,
     `task_id` bigint(20) NOT NULL,
     PRIMARY KEY (`user_id`, `task_id`)

@@ -67,6 +67,14 @@ func main() {
 	// ログアウト
 	engine.GET("/logout", service.Logout)
 
+	// データベース
+	databaseGroup := engine.Group("/database")
+	databaseGroup.Use()
+	{
+		databaseGroup.GET("/users", service.ShowUsers)
+		databaseGroup.GET("/tasks", service.ShowTasks)
+		databaseGroup.GET("/ownerships", service.ShowOwnerships)
+	}
 
 	// start server
 	engine.Run(fmt.Sprintf(":%d", port))
