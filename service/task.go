@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-contrib/sessions"
 	database "todolist.go/db"
 )
 
@@ -20,34 +21,35 @@ func TaskList(ctx *gin.Context) {
 
     // Get query parameter
     kw := ctx.Query("kw")
-
 		str_is_done := ctx.Query("is_done")
 		str_is_not_done := ctx.Query("is_not_done")
+		userID := sessions.Default(ctx).Get("user")
  
     // Get tasks in DB
     var tasks []database.Task
+		query := "SELECT id, title, created_at, is_done FROM tasks INNER JOIN ownership ON task_id = id WHERE user_id = ?"
     switch {
     case kw != "":
 				switch{
 				case str_is_done != "" && str_is_not_done != "":
-					err = db.Select(&tasks, "SELECT * FROM tasks WHERE title LIKE ?", "%" + kw + "%")
+					err = db.Select(&tasks, query + "AND title LIKE ?", userID, "%" + kw + "%")
 				case str_is_done != "":
-					err = db.Select(&tasks, "SELECT * FROM tasks WHERE title LIKE ? AND is_done = ?", "%" + kw + "%", true)
+					err = db.Select(&tasks, query + "AND title LIKE ? AND is_done = ?", userID, "%" + kw + "%", true)
 				case str_is_not_done != "":
-					err = db.Select(&tasks, "SELECT * FROM tasks WHERE title LIKE ? AND is_done = ?", "%" + kw + "%", false)
+					err = db.Select(&tasks, query + "AND title LIKE ? AND is_done = ?", userID, "%" + kw + "%", false)
 				default:        
-					err = db.Select(&tasks, "SELECT * FROM tasks WHERE title LIKE ?", "%" + kw + "%")
+					err = db.Select(&tasks, query + "AND title LIKE ?", userID, "%" + kw + "%")
 				}
     default:
 			switch{
 			case str_is_done != "" && str_is_not_done != "":
-        err = db.Select(&tasks, "SELECT * FROM tasks")
+        err = db.Select(&tasks, query, userID)
 			case str_is_done != "":
-        err = db.Select(&tasks, "SELECT * FROM tasks WHERE is_done = ?", true)
+        err = db.Select(&tasks, query + "AND is_done = ?", userID, true)
 			case str_is_not_done != "":
-        err = db.Select(&tasks, "SELECT * FROM tasks WHERE is_done = ?", false)
+        err = db.Select(&tasks, query + "AND is_done = ?", userID, false)
 			default:
-        err = db.Select(&tasks, "SELECT * FROM tasks")
+        err = db.Select(&tasks,query, userID)
 			}
     }
     if err != nil {

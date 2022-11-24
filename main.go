@@ -41,18 +41,19 @@ func main() {
 	engine.Static("/assets", "./assets")
 	engine.GET("/", service.Home)
 	engine.GET("/list", service.LoginCheck, service.TaskList)
+	// engine.GET("/task/new", service.NewTaskForm)
 	taskGroup := engine.Group("/task")
 	taskGroup.Use(service.LoginCheck)
 	{
-		engine.GET("/:id", service.ShowTask) // ":id" is a parameter
+		taskGroup.GET("/:id", service.ShowTask) // ":id" is a parameter
 		// タスクの新規登録
-		engine.GET("/new", service.NewTaskForm)
-		engine.POST("/new", service.RegisterTask)
+		taskGroup.GET("/new", service.NewTaskForm)
+		taskGroup.POST("/new", service.RegisterTask)
 		// 既存タスクの編集
-		engine.GET("/edit/:id", service.EditTaskForm)
-		engine.POST("/edit/:id", service.UpdateTask)
+		taskGroup.GET("/edit/:id", service.EditTaskForm)
+		taskGroup.POST("/edit/:id", service.UpdateTask)
 		// 既存タスクの削除
-		engine.GET("/delete/:id", service.DeleteTask)
+		taskGroup.GET("/delete/:id", service.DeleteTask)
 	}
 
 

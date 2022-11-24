@@ -5,6 +5,7 @@ import (
     "net/http"
 		"unicode/utf8"
 		"encoding/hex"
+		"strconv"
  
     "github.com/gin-gonic/gin"
 		"github.com/gin-contrib/sessions"
@@ -77,7 +78,7 @@ func RegisterUser(ctx *gin.Context) {
 			Error(http.StatusInternalServerError, err.Error())(ctx)
 			return
 	}
-	ctx.JSON(http.StatusOK, user)
+	TaskList(ctx)
 }
 
 const userkey = "user"
@@ -119,11 +120,41 @@ func Login(ctx *gin.Context) {
 }
 
 func LoginCheck(ctx *gin.Context) {
-	if sessions.Default(ctx).Get(userkey) == nil {
+	user_id := sessions.Default(ctx).Get(userkey)
+	if user_id == nil {
 			ctx.Redirect(http.StatusFound, "/login")
 			ctx.Abort()
 	} else {
+		// ID の取得
+		str_task_id := ctx.Param("id")
+		if str_task_id == "" {
+			// taskのidが指定されてないもの
 			ctx.Next()
+		}else{
+			int_task_id, err := strconv.Atoi(str_task_id)
+			if err != nil {
+				Error(http.StatusBadRequest, err.Error())(ctx)
+				return
+			}
+
+			// Get DB connection
+			db, err := database.GetConnection()
+			if err != nil {
+				Error(http.StatusInternalServerError, err.Error())(ctx)
+				return
+			}
+
+			var tasks []database.Task
+			db.Select(&tasks, "SELECT * FROM ownership WHERE user_id = ? AND task_id = ?", user_id, int_task_id)
+
+			if tasks == nil{
+				ctx.JSON(http.StatusNotFound, "you do not have access right.")
+				ctx.Abort()
+			}else{
+				ctx.Next()
+			}
+		}
+			
 	}
 }
 
