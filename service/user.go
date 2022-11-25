@@ -166,3 +166,44 @@ func Logout(ctx *gin.Context) {
 	session.Save()
 	ctx.Redirect(http.StatusFound, "/")
 }
+
+func DeleteUser(ctx *gin.Context){
+	// ID の取得
+	id := sessions.Default(ctx).Get("user")
+	// Get DB connection
+	db, err := database.GetConnection()
+	if err != nil {
+			Error(http.StatusInternalServerError, err.Error())(ctx)
+			return
+	}
+	tx := db.MustBegin()
+	// Delete the tasks from DB
+	_, err = tx.Exec("DELETE tasks FROM tasks INNER JOIN ownerships ON ownerships.task_id = tasks.id WHERE ownerships.user_id = ?", id)
+	if err != nil {
+		tx.Rollback()
+		Error(http.StatusInternalServerError, err.Error())(ctx)
+		return
+	}
+	// Delete the ownerships from DB
+	_, err = tx.Exec("DELETE FROM ownerships WHERE user_id=?", id)
+	if err != nil {
+		tx.Rollback()
+		Error(http.StatusInternalServerError, err.Error())(ctx)
+		return
+	}
+	// Delete the user from DB
+	_, err = tx.Exec("DELETE FROM users WHERE id=?", id)
+	if err != nil {
+		tx.Rollback()
+		Error(http.StatusInternalServerError, err.Error())(ctx)
+		return
+	}
+	tx.Commit()
+
+	session := sessions.Default(ctx)
+	session.Clear()
+	session.Options(sessions.Options{MaxAge: -1})
+	session.Save()
+	// Redirect to /list
+	ctx.Redirect(http.StatusFound, "/")
+}

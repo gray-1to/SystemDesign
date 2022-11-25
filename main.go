@@ -66,6 +66,8 @@ func main() {
 	engine.POST("/login", service.Login)
 	// ログアウト
 	engine.GET("/logout", service.Logout)
+	// ユーザー削除
+	engine.GET("/delete_user", service.DeleteUser)
 
 	// データベース
 	databaseGroup := engine.Group("/database")
