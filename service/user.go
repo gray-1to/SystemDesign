@@ -79,6 +79,12 @@ func RegisterUser(ctx *gin.Context) {
 			Error(http.StatusInternalServerError, err.Error())(ctx)
 			return
 	}
+
+	// セッションの保存
+	session := sessions.Default(ctx)
+	session.Set(userkey, user.ID)
+	session.Save()
+
 	TaskList(ctx)
 }
 
