@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 	"fmt"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/sessions"
@@ -27,27 +28,27 @@ func TaskList(ctx *gin.Context) {
  
     // Get tasks in DB
     var tasks []database.Task
-		query := "SELECT id, title, comment, created_at, is_done, priority FROM tasks INNER JOIN ownerships ON task_id = id WHERE user_id = ?"
+		query := "SELECT id, title, comment, created_at, is_done, priority, deadline FROM tasks INNER JOIN ownerships ON task_id = id WHERE user_id = ?"
     switch {
     case kw != "":
 				switch{
 				case str_is_done != "" && str_is_not_done != "":
-					err = db.Select(&tasks, query + "AND title LIKE ?", userID, "%" + kw + "%")
+					err = db.Select(&tasks, query + " AND title LIKE ?", userID, "%" + kw + "%")
 				case str_is_done != "":
-					err = db.Select(&tasks, query + "AND title LIKE ? AND is_done = ?", userID, "%" + kw + "%", true)
+					err = db.Select(&tasks, query + " AND title LIKE ? AND is_done = ?", userID, "%" + kw + "%", true)
 				case str_is_not_done != "":
-					err = db.Select(&tasks, query + "AND title LIKE ? AND is_done = ?", userID, "%" + kw + "%", false)
+					err = db.Select(&tasks, query + " AND title LIKE ? AND is_done = ?", userID, "%" + kw + "%", false)
 				default:        
-					err = db.Select(&tasks, query + "AND title LIKE ?", userID, "%" + kw + "%")
+					err = db.Select(&tasks, query + " AND title LIKE ?", userID, "%" + kw + "%")
 				}
     default:
 			switch{
 			case str_is_done != "" && str_is_not_done != "":
         err = db.Select(&tasks, query, userID)
 			case str_is_done != "":
-        err = db.Select(&tasks, query + "AND is_done = ?", userID, true)
+        err = db.Select(&tasks, query + " AND is_done = ?", userID, true)
 			case str_is_not_done != "":
-        err = db.Select(&tasks, query + "AND is_done = ?", userID, false)
+        err = db.Select(&tasks, query + " AND is_done = ?", userID, false)
 			default:
         err = db.Select(&tasks,query, userID)
 			}
@@ -56,9 +57,17 @@ func TaskList(ctx *gin.Context) {
         Error(http.StatusInternalServerError, err.Error())(ctx)
         return
     }
+
+		// judge danger deadline
+		var danger_deadline []bool
+		now_time := time.Now()
+		for task_index := range tasks{
+			var diff = tasks[task_index].Deadline.Sub(now_time)
+			danger_deadline = append(danger_deadline, diff.Hours() < 5*24)
+		}
  
     // Render tasks
-    ctx.HTML(http.StatusOK, "task_list.html", gin.H{"Title": "Task list", "Tasks": tasks, "Kw": kw, "IsDone": str_is_done == "checked", "IsNotDone": str_is_not_done == "checked"})
+    ctx.HTML(http.StatusOK, "task_list.html", gin.H{"Title": "Task list", "Tasks": tasks, "Kw": kw, "IsDone": str_is_done == "checked", "IsNotDone": str_is_not_done == "checked", "DangerDeadline": danger_deadline})
 }
 
 // ShowTask renders a task with given ID
@@ -85,9 +94,13 @@ func ShowTask(ctx *gin.Context) {
 		return
 	}
 
+	str_year := strconv.Itoa(task.Deadline.Year())
+	str_month := strconv.Itoa(int(task.Deadline.Month()))
+	str_day := strconv.Itoa(task.Deadline.Day())
+	str_deadline := str_year + "-"  + str_month + "-" + str_day
+
 	// Render task
-	// ctx.String(http.StatusOK, task.Title)  // Modify it!!
-	ctx.HTML(http.StatusOK, "task.html", task)
+	ctx.HTML(http.StatusOK, "task.html", gin.H{"Task": task, "Deadline": str_deadline})
 }
 
 func NewTaskForm(ctx *gin.Context) {
@@ -119,6 +132,12 @@ func RegisterTask(ctx *gin.Context) {
 		Error(http.StatusBadRequest, error.Error())(ctx)
 		return
 	}
+	// Get task deadline
+	deadline, exist := ctx.GetPostForm("deadline")
+	if !exist {
+			Error(http.StatusBadRequest, "No deadline is given")(ctx)
+			return
+	}
 	// Get DB connection
 	db, err := database.GetConnection()
 	if err != nil {
@@ -127,7 +146,7 @@ func RegisterTask(ctx *gin.Context) {
 	}
 	tx := db.MustBegin()
 	// Create new data with given title on DB
-	result, err := tx.Exec("INSERT INTO tasks (title, comment, priority) VALUES (?, ?, ?)", title, comment, int_priority)
+	result, err := tx.Exec("INSERT INTO tasks (title, comment, priority, deadline) VALUES (?, ?, ?, ?)", title, comment, int_priority, deadline)
 	if err != nil {
 			tx.Rollback()
 			Error(http.StatusInternalServerError, err.Error())(ctx)
@@ -170,9 +189,16 @@ func EditTaskForm(ctx *gin.Context) {
 			Error(http.StatusBadRequest, err.Error())(ctx)
 			return
 	}
+
+
+	str_year := strconv.Itoa(task.Deadline.Year())
+	str_month := strconv.Itoa(int(task.Deadline.Month()))
+	str_day := strconv.Itoa(task.Deadline.Day())
+	str_deadline := str_year + "-"  + str_month + "-" + str_day
+
 	// Render edit form
 	ctx.HTML(http.StatusOK, "form_edit_task.html",
-			gin.H{"Title": fmt.Sprintf("Edit task %d", task.ID), "Task": task})
+			gin.H{"Title": fmt.Sprintf("Edit task %d", task.ID), "Task": task, "Deadline": str_deadline})
 }
 
 func UpdateTask(ctx *gin.Context){
@@ -194,6 +220,13 @@ func UpdateTask(ctx *gin.Context){
 			Error(http.StatusBadRequest, "No comment is given")(ctx)
 			return
 	}
+	// Get task is_done
+	str_is_done, exist := ctx.GetPostForm("is_done")
+	if !exist {
+			Error(http.StatusBadRequest, "No is_done is given")(ctx)
+			return
+	}
+	bool_is_done := str_is_done == "t"
 	// Get task priority
 	str_priority, exist := ctx.GetPostForm("priority")
 	if !exist {
@@ -205,13 +238,12 @@ func UpdateTask(ctx *gin.Context){
 		Error(http.StatusBadRequest, error.Error())(ctx)
 		return
 	}
-	// Get task is_done
-	str_is_done, exist := ctx.GetPostForm("is_done")
+	// Get task comment
+	deadline, exist := ctx.GetPostForm("deadline")
 	if !exist {
-			Error(http.StatusBadRequest, "No is_done is given")(ctx)
+			Error(http.StatusBadRequest, "No deadline is given")(ctx)
 			return
 	}
-	bool_is_done := str_is_done == "t"
 	// Get DB connection
 	db, err := database.GetConnection()
 	if err != nil {
@@ -219,7 +251,7 @@ func UpdateTask(ctx *gin.Context){
 			return
 	}
 	// Create new data with given title on DB
-	db.Exec("UPDATE tasks SET title = ?, comment = ?, is_done = ?, priority = ? WHERE id = ?", title, comment, bool_is_done, int_priority, id)
+	db.Exec("UPDATE tasks SET title = ?, comment = ?, is_done = ?, priority = ?, deadline = ? WHERE id = ?", title, comment, bool_is_done, int_priority, deadline, id)
 	if err != nil {
 			Error(http.StatusInternalServerError, err.Error())(ctx)
 			return

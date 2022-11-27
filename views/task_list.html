@@ -19,15 +19,17 @@
         <th>登録日</th>
         <th>状態</th>
         <th>優先度</th>
+        <th>締め切り</th>
     </tr>
-    {{ range $task := .Tasks }}
-    <tr {{ if gt $task.Priority 5}}style="color:red"{{ end }}>
+    {{ range $task_index, $task := .Tasks }}
+    <tr style='{{ if gt $task.Priority 5}}font-weight:bold;{{ end }} {{ if index $.DangerDeadline $task_index}}color:red;{{ end }}'>
         <td><a href="/task/{{ $task.ID }}">{{ $task.ID }}</a></td>
         <td>{{ $task.Title }}</td>
         <td>{{ $task.Comment }}</td>
         <td>{{ $task.CreatedAt }}</td>
         <td>{{ if $task.IsDone }}済{{ else }}未{{ end }}</td>
         <td>{{ $task.Priority }}</td>
+        <td>{{ $task.Deadline }}</td>
     </tr>
     {{ end }}
 </table>
