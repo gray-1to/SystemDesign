@@ -18,6 +18,7 @@
         <th>コメント</th>
         <th>登録日</th>
         <th>状態</th>
+        <th>優先度</th>
     </tr>
     {{ range $task := .Tasks }}
     <tr>
@@ -26,6 +27,7 @@
         <td>{{ $task.Comment }}</td>
         <td>{{ $task.CreatedAt }}</td>
         <td>{{ if $task.IsDone }}済{{ end }}</td>
+        <td>{{ $task.Priority }}</td>
     </tr>
     {{ end }}
 </table>

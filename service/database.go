@@ -33,7 +33,7 @@ func ShowTasks(ctx *gin.Context){
 	}
 	
 	var datas []database.Task
-	err = db.Select(&datas, "SELECT id, title, comment, is_done FROM tasks") // Use DB#Get for one entry
+	err = db.Select(&datas, "SELECT id, title, comment, is_done, priority FROM tasks") // Use DB#Get for one entry
 	if err != nil {
 		Error(http.StatusBadRequest, err.Error())(ctx)
 		return

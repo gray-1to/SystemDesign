@@ -3,4 +3,4 @@ INSERT INTO `tasks` (`title`) VALUES ("sample-task-02");
 INSERT INTO `tasks` (`title`) VALUES ("sample-task-03");
 INSERT INTO `tasks` (`title`) VALUES ("sample-task-04");
 INSERT INTO `tasks` (`title`, `is_done`) VALUES ("sample-task-05", true);
-INSERT INTO `tasks` (`title`, `comment`) VALUES ("sample-task-06", "comment here");
+INSERT INTO `tasks` (`title`, `comment`, `priority`) VALUES ("sample-task-06", "comment here", 5);

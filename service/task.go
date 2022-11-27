@@ -27,7 +27,7 @@ func TaskList(ctx *gin.Context) {
  
     // Get tasks in DB
     var tasks []database.Task
-		query := "SELECT id, title, created_at, is_done FROM tasks INNER JOIN ownerships ON task_id = id WHERE user_id = ?"
+		query := "SELECT id, title, created_at, is_done, priority FROM tasks INNER JOIN ownerships ON task_id = id WHERE user_id = ?"
     switch {
     case kw != "":
 				switch{
@@ -108,6 +108,17 @@ func RegisterTask(ctx *gin.Context) {
 			Error(http.StatusBadRequest, "No comment is given")(ctx)
 			return
 	}
+	// Get task priority
+	str_priority, exist := ctx.GetPostForm("priority")
+	if !exist {
+			Error(http.StatusBadRequest, "No priority is given")(ctx)
+			return
+	}
+	int_priority, error := strconv.Atoi(str_priority)
+	if error != nil {
+		Error(http.StatusBadRequest, error.Error())(ctx)
+		return
+	}
 	// Get DB connection
 	db, err := database.GetConnection()
 	if err != nil {
@@ -116,7 +127,7 @@ func RegisterTask(ctx *gin.Context) {
 	}
 	tx := db.MustBegin()
 	// Create new data with given title on DB
-	result, err := tx.Exec("INSERT INTO tasks (title, comment) VALUES (?, ?)", title, comment)
+	result, err := tx.Exec("INSERT INTO tasks (title, comment, priority) VALUES (?, ?, ?)", title, comment, int_priority)
 	if err != nil {
 			tx.Rollback()
 			Error(http.StatusInternalServerError, err.Error())(ctx)
@@ -183,6 +194,17 @@ func UpdateTask(ctx *gin.Context){
 			Error(http.StatusBadRequest, "No comment is given")(ctx)
 			return
 	}
+	// Get task priority
+	str_priority, exist := ctx.GetPostForm("priority")
+	if !exist {
+			Error(http.StatusBadRequest, "No priority is given")(ctx)
+			return
+	}
+	int_priority, error := strconv.Atoi(str_priority)
+	if error != nil {
+		Error(http.StatusBadRequest, error.Error())(ctx)
+		return
+	}
 	// Get task is_done
 	str_is_done, exist := ctx.GetPostForm("is_done")
 	if !exist {
@@ -197,7 +219,7 @@ func UpdateTask(ctx *gin.Context){
 			return
 	}
 	// Create new data with given title on DB
-	db.Exec("UPDATE tasks SET title = ?, comment = ?, is_done = ? WHERE id = ?", title, comment, bool_is_done, id)
+	db.Exec("UPDATE tasks SET title = ?, comment = ?, is_done = ?, priority = ? WHERE id = ?", title, comment, bool_is_done, int_priority, id)
 	if err != nil {
 			Error(http.StatusInternalServerError, err.Error())(ctx)
 			return

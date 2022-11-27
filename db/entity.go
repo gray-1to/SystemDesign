@@ -12,6 +12,7 @@ type Task struct {
 	Comment   string    `db:"comment"`
 	CreatedAt time.Time `db:"created_at"`
 	IsDone    bool      `db:"is_done"`
+	Priority  uint64    `db:"priority"`
 }
 
 type User struct {
