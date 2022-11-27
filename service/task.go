@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"fmt"
 	"time"
+	"math"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/sessions"
@@ -69,8 +70,23 @@ func TaskList(ctx *gin.Context) {
 			rest_day = append(rest_day, int(diff.Hours() / 24 + 1))
 		}
 
+		// pagenation
+		tasks_length := len(tasks)
+		page_id, err := strconv.Atoi(ctx.Param("page_id"))
+		if err != nil {
+				Error(http.StatusBadRequest, err.Error())(ctx)
+				return
+		}
+		start_id := page_id * 5
+		next_start_id := int(math.Min(float64((page_id + 1) * 5), float64(tasks_length)))
+		tasks = tasks[start_id:next_start_id]
+		has_pre_page := page_id > 0
+		pre_page_id := page_id - 1
+		has_next_page := (tasks_length - start_id) > 5
+		next_page_id := page_id + 1
+
     // Render tasks
-    ctx.HTML(http.StatusOK, "task_list.html", gin.H{"Title": "Task list", "Tasks": tasks, "Kw": kw, "IsDone": str_is_done == "checked", "IsNotDone": str_is_not_done == "checked", "DangerDeadline": danger_deadline, "RestDay": rest_day})
+    ctx.HTML(http.StatusOK, "task_list.html", gin.H{"Title": "Task list", "Tasks": tasks, "Kw": kw, "IsDone": str_is_done == "checked", "IsNotDone": str_is_not_done == "checked", "DangerDeadline": danger_deadline, "RestDay": rest_day, "PageId": page_id, "HasPrePage": has_pre_page, "PrePageId": pre_page_id, "HasNextPage": has_next_page, "NextPageId": next_page_id})
 }
 
 // ShowTask renders a task with given ID
@@ -260,8 +276,8 @@ func UpdateTask(ctx *gin.Context){
 			return
 	}
 	// Render status
-	path := "/list"  // デフォルトではタスク一覧ページへ戻る
-	path = fmt.Sprintf("/task/%d", id)
+	// path := "/list"  // デフォルトではタスク一覧ページへ戻る
+	path := fmt.Sprintf("/task/%d", id)
 	ctx.Redirect(http.StatusFound, path)
 }
 
@@ -285,5 +301,5 @@ func DeleteTask(ctx *gin.Context) {
 			return
 	}
 	// Redirect to /list
-	ctx.Redirect(http.StatusFound, "/list")
+	ctx.Redirect(http.StatusFound, "/list/0")
 }

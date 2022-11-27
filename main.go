@@ -40,7 +40,7 @@ func main() {
 	// routing
 	engine.Static("/assets", "./assets")
 	engine.GET("/", service.Home)
-	engine.GET("/list", service.LoginCheck, service.TaskList)
+	engine.GET("/list/:page_id", service.LoginCheck, service.TaskList)
 	// engine.GET("/task/new", service.NewTaskForm)
 	taskGroup := engine.Group("/task")
 	taskGroup.Use(service.LoginCheck)

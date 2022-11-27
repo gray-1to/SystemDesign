@@ -36,6 +36,13 @@
     {{ end }}
 </table>
 {{ end }}
+{{ if .HasPrePage }}
+<p><a href="/list/{{ .PrePageId }}">前へ</a></p>
+{{ end }}
+{{ if .HasNextPage }}
+<p><a href="/list/{{ .NextPageId }}">次へ</a></p>
+{{ end }}
+<br>
 <p><a href="/logout">ログアウト</a></p>
 <p><a href="/delete_user">ユーザを削除する</a></p>
 {{ template "footer" }}
