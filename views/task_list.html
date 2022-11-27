@@ -21,7 +21,7 @@
         <th>優先度</th>
     </tr>
     {{ range $task := .Tasks }}
-    <tr>
+    <tr {{ if gt $task.Priority 5}}style="color:red"{{ end }}>
         <td><a href="/task/{{ $task.ID }}">{{ $task.ID }}</a></td>
         <td>{{ $task.Title }}</td>
         <td>{{ $task.Comment }}</td>
