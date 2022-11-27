@@ -27,7 +27,7 @@ func TaskList(ctx *gin.Context) {
  
     // Get tasks in DB
     var tasks []database.Task
-		query := "SELECT id, title, created_at, is_done, priority FROM tasks INNER JOIN ownerships ON task_id = id WHERE user_id = ?"
+		query := "SELECT id, title, comment, created_at, is_done, priority FROM tasks INNER JOIN ownerships ON task_id = id WHERE user_id = ?"
     switch {
     case kw != "":
 				switch{
