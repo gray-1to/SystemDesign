@@ -59,15 +59,18 @@ func TaskList(ctx *gin.Context) {
     }
 
 		// judge danger deadline
+		// clac rest day
 		var danger_deadline []bool
+		var rest_day []int
 		now_time := time.Now()
 		for task_index := range tasks{
 			var diff = tasks[task_index].Deadline.Sub(now_time)
 			danger_deadline = append(danger_deadline, diff.Hours() < 5*24)
+			rest_day = append(rest_day, int(diff.Hours() / 24 + 1))
 		}
- 
+
     // Render tasks
-    ctx.HTML(http.StatusOK, "task_list.html", gin.H{"Title": "Task list", "Tasks": tasks, "Kw": kw, "IsDone": str_is_done == "checked", "IsNotDone": str_is_not_done == "checked", "DangerDeadline": danger_deadline})
+    ctx.HTML(http.StatusOK, "task_list.html", gin.H{"Title": "Task list", "Tasks": tasks, "Kw": kw, "IsDone": str_is_done == "checked", "IsNotDone": str_is_not_done == "checked", "DangerDeadline": danger_deadline, "RestDay": rest_day})
 }
 
 // ShowTask renders a task with given ID
