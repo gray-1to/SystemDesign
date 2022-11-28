@@ -41,6 +41,7 @@ func main() {
 	engine.Static("/assets", "./assets")
 	engine.GET("/", service.Home)
 	engine.GET("/list/:page_id", service.LoginCheck, service.TaskList)
+	engine.GET("/list", service.LoginCheck, service.TaskList)
 	// engine.GET("/task/new", service.NewTaskForm)
 	taskGroup := engine.Group("/task")
 	taskGroup.Use(service.LoginCheck)
@@ -55,6 +56,8 @@ func main() {
 		// 既存タスクの削除
 		taskGroup.GET("/delete/:id", service.DeleteTask)
 	}
+
+	engine.POST("/category/new", service.RegisterCategory)
 
 
 	// ユーザ登録
@@ -76,6 +79,8 @@ func main() {
 		databaseGroup.GET("/users", service.ShowUsers)
 		databaseGroup.GET("/tasks", service.ShowTasks)
 		databaseGroup.GET("/ownerships", service.ShowOwnerships)
+		databaseGroup.GET("/categories", service.ShowCategories)
+		databaseGroup.GET("/task_categories", service.ShowTaskCategories)
 	}
 
 	// start server

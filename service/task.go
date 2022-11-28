@@ -1,14 +1,15 @@
 package service
 
 import (
+	"fmt"
+	"math"
 	"net/http"
 	"strconv"
-	"fmt"
+	"strings"
 	"time"
-	"math"
 
-	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/sessions"
+	"github.com/gin-gonic/gin"
 	database "todolist.go/db"
 )
 
@@ -74,13 +75,25 @@ func TaskList(ctx *gin.Context) {
 		tasks_length := len(tasks)
 		str_page_id := ctx.Param("page_id")
 		var page_id int 
-		if str_page_id == ""{
-			page_id = 0
-		}else{
+		if str_page_id != ""{
+			// URLパラメータ内にpage_idがある場合
 			page_id, err = strconv.Atoi(str_page_id)
 			if err != nil {
 					Error(http.StatusBadRequest, err.Error())(ctx)
 					return
+			}
+			// セッション内のpage_idを更新
+			// セッションの保存
+			session := sessions.Default(ctx)
+			session.Set("page_id", page_id)
+			session.Save()
+		}else{
+			// URLパラメータ内にpage_idがない場合はセッションを参照
+			session_page_id := sessions.Default(ctx).Get("page_id")
+			if session_page_id != nil{
+				page_id = session_page_id.(int)
+			}else{
+				page_id = 0
 			}
 		}
 
@@ -106,16 +119,18 @@ func ShowTask(ctx *gin.Context) {
 	}
 
 	// parse ID given as a parameter
-	id, err := strconv.Atoi(ctx.Param("id"))
+	task_id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
 		Error(http.StatusBadRequest, err.Error())(ctx)
 		return
 	}
 
+	tx := db.MustBegin()
 	// Get a task with given ID
 	var task database.Task
-	err = db.Get(&task, "SELECT * FROM tasks WHERE id=?", id) // Use DB#Get for one entry
+	err = tx.Get(&task, "SELECT * FROM tasks WHERE id=?", task_id) // Use DB#Get for one entry
 	if err != nil {
+		tx.Rollback()
 		Error(http.StatusBadRequest, err.Error())(ctx)
 		return
 	}
@@ -125,8 +140,27 @@ func ShowTask(ctx *gin.Context) {
 	str_day := strconv.Itoa(task.Deadline.Day())
 	str_deadline := str_year + "-"  + str_month + "-" + str_day
 
+	var category_ids []int
+	err = tx.Select(&category_ids, "SELECT category_id FROM task_category WHERE task_id = ?", task_id)
+	if err != nil {
+		tx.Rollback()
+		Error(http.StatusBadRequest, err.Error())(ctx)
+		return
+	}
+	var category_names []string
+	for _, category_id := range category_ids{
+		var category_name string
+		err = tx.Get(&category_name, "SELECT category_name FROM categories WHERE id = ?", category_id)
+		if err != nil {
+			tx.Rollback()
+			Error(http.StatusBadRequest, err.Error())(ctx)
+			return
+		}		
+		category_names = append(category_names, category_name)
+	}
+	tx.Commit()
 	// Render task
-	ctx.HTML(http.StatusOK, "task.html", gin.H{"Task": task, "Deadline": str_deadline})
+	ctx.HTML(http.StatusOK, "task.html", gin.H{"Task": task, "Deadline": str_deadline, "CategoryNames": category_names})
 }
 
 func NewTaskForm(ctx *gin.Context) {
@@ -164,6 +198,9 @@ func RegisterTask(ctx *gin.Context) {
 			Error(http.StatusBadRequest, "No deadline is given")(ctx)
 			return
 	}
+	// Get task deadline
+	space_linked_category_names, category_exist := ctx.GetPostForm("category_name")
+
 	// Get DB connection
 	db, err := database.GetConnection()
 	if err != nil {
@@ -190,6 +227,24 @@ func RegisterTask(ctx *gin.Context) {
 			Error(http.StatusInternalServerError, err.Error())(ctx)
 			return
 	}
+	if category_exist{
+		category_names := strings.Split(space_linked_category_names, " ")
+		for _, category_name := range category_names{
+			var category_id int
+			err = tx.Get(&category_id, "SELECT id FROM categories WHERE category_name = ?", category_name)
+			if err != nil{
+				tx.Rollback()
+				Error(http.StatusBadRequest, "improper category name")(ctx)
+				return
+			}
+			_, err = tx.Exec("INSERT INTO task_category (task_id, category_id) VALUES (?, ?)", taskID, category_id)
+			if err != nil {
+					tx.Rollback()
+					Error(http.StatusInternalServerError, err.Error())(ctx)
+					return
+			}
+		}
+	}
 	tx.Commit()
 	// Render status
 	ctx.Redirect(http.StatusFound, fmt.Sprintf("/task/%d", taskID))
@@ -197,7 +252,7 @@ func RegisterTask(ctx *gin.Context) {
 
 func EditTaskForm(ctx *gin.Context) {
 	// ID の取得
-	id, err := strconv.Atoi(ctx.Param("id"))
+	task_id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
 			Error(http.StatusBadRequest, err.Error())(ctx)
 			return
@@ -210,7 +265,7 @@ func EditTaskForm(ctx *gin.Context) {
 	}
 	// Get target task
 	var task database.Task
-	err = db.Get(&task, "SELECT * FROM tasks WHERE id=?", id)
+	err = db.Get(&task, "SELECT * FROM tasks WHERE id=?", task_id)
 	if err != nil {
 			Error(http.StatusBadRequest, err.Error())(ctx)
 			return
@@ -222,14 +277,35 @@ func EditTaskForm(ctx *gin.Context) {
 	str_day := strconv.Itoa(task.Deadline.Day())
 	str_deadline := str_year + "-"  + str_month + "-" + str_day
 
+	tx := db.MustBegin()
+	var category_ids []int
+	err = tx.Select(&category_ids, "SELECT category_id FROM task_category WHERE task_id = ?", task_id)
+	if err != nil {
+		tx.Rollback()
+		Error(http.StatusBadRequest, err.Error())(ctx)
+		return
+	}
+	var category_names []string
+	for _, category_id := range category_ids{
+		var category_name string
+		err = tx.Get(&category_name, "SELECT category_name FROM categories WHERE id = ?", category_id)
+		if err != nil {
+			tx.Rollback()
+			Error(http.StatusBadRequest, err.Error())(ctx)
+			return
+		}		
+		category_names = append(category_names, category_name)
+	}
+	tx.Commit()
+
 	// Render edit form
 	ctx.HTML(http.StatusOK, "form_edit_task.html",
-			gin.H{"Title": fmt.Sprintf("Edit task %d", task.ID), "Task": task, "Deadline": str_deadline})
+			gin.H{"Title": fmt.Sprintf("Edit task %d", task.ID), "Task": task, "Deadline": str_deadline, "CategoryName": strings.Join(category_names, " ")})
 }
 
 func UpdateTask(ctx *gin.Context){
 	// ID の取得
-	id, err := strconv.Atoi(ctx.Param("id"))
+	task_id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
 			Error(http.StatusBadRequest, err.Error())(ctx)
 			return
@@ -264,27 +340,58 @@ func UpdateTask(ctx *gin.Context){
 		Error(http.StatusBadRequest, error.Error())(ctx)
 		return
 	}
+	// Get task deadline
+	space_linked_category_names, category_exist := ctx.GetPostForm("category_name")
+
 	// Get task comment
 	deadline, exist := ctx.GetPostForm("deadline")
 	if !exist {
 			Error(http.StatusBadRequest, "No deadline is given")(ctx)
 			return
 	}
+
 	// Get DB connection
 	db, err := database.GetConnection()
 	if err != nil {
 			Error(http.StatusInternalServerError, err.Error())(ctx)
 			return
 	}
+	tx := db.MustBegin()
 	// Create new data with given title on DB
-	db.Exec("UPDATE tasks SET title = ?, comment = ?, is_done = ?, priority = ?, deadline = ? WHERE id = ?", title, comment, bool_is_done, int_priority, deadline, id)
+	tx.Exec("UPDATE tasks SET title = ?, comment = ?, is_done = ?, priority = ?, deadline = ? WHERE id = ?", title, comment, bool_is_done, int_priority, deadline, task_id)
 	if err != nil {
-			Error(http.StatusInternalServerError, err.Error())(ctx)
-			return
+		tx.Rollback()
+		Error(http.StatusInternalServerError, err.Error())(ctx)
+		return
 	}
+	// Delete the task_category from DB
+	_, err = tx.Exec("DELETE FROM task_category WHERE task_id=?", task_id)
+	if err != nil {
+		tx.Rollback()
+		Error(http.StatusInternalServerError, err.Error())(ctx)
+		return
+	}
+	if category_exist{
+		category_names := strings.Split(space_linked_category_names, " ")
+		for _, category_name := range category_names{
+			var category_id int
+			err = tx.Get(&category_id, "SELECT id FROM categories WHERE category_name = ?", category_name)
+			if err != nil{
+				tx.Rollback()
+				Error(http.StatusBadRequest, "improper category name")(ctx)
+				return
+			}
+			_, err = tx.Exec("INSERT INTO task_category (task_id, category_id) VALUES (?, ?)", task_id, category_id)
+			if err != nil {
+				tx.Rollback()
+				Error(http.StatusInternalServerError, err.Error())(ctx)
+				return
+			}
+		}
+	}
+	tx.Commit()
 	// Render status
-	// path := "/list"  // デフォルトではタスク一覧ページへ戻る
-	path := fmt.Sprintf("/task/%d", id)
+	path := fmt.Sprintf("/task/%d", task_id)
 	ctx.Redirect(http.StatusFound, path)
 }
 

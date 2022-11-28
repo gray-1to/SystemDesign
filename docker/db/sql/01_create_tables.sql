@@ -23,10 +23,26 @@ CREATE TABLE `users` (
     PRIMARY KEY (`id`)
 ) DEFAULT CHARSET=utf8mb4;
 
-DROP TABLE IF EXISTS `ownership`;
+DROP TABLE IF EXISTS `ownerships`;
  
 CREATE TABLE `ownerships` (
     `user_id` bigint(20) NOT NULL,
     `task_id` bigint(20) NOT NULL,
     PRIMARY KEY (`user_id`, `task_id`)
+) DEFAULT CHARSET=utf8mb4;
+
+DROP TABLE IF EXISTS `categories`;
+
+CREATE TABLE `categories` (
+    `id` bigint(20) NOT NULL AUTO_INCREMENT,
+    `category_name` varchar(50) NOT NULL,
+    PRIMARY KEY (`id`)
+) DEFAULT CHARSET=utf8mb4;
+
+DROP TABLE IF EXISTS `task_category`;
+
+CREATE TABLE `task_category` (
+    `task_id` bigint(20) NOT NULL,
+    `category_id` bigint(20) NOT NULL,
+    PRIMARY KEY (`task_id`, `category_id`) 
 ) DEFAULT CHARSET=utf8mb4;

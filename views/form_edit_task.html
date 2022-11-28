@@ -12,6 +12,8 @@
     <br>
     <label>Deadline</label><input type="date" name="deadline" value="{{ .Deadline }}" required>
     <br>
+    <label>Category</label><input type="text" name="category_name" value="{{ .CategoryName }}" required>
+    <br>
     <button onclick="confirm_update({{ .Task.ID }})">登録</button>
     <a href="/task/{{ .Task.ID }}"><button type="button">戻る</button></a>
 </form>

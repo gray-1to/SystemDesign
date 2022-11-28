@@ -57,3 +57,37 @@ func ShowOwnerships(ctx *gin.Context){
 	}
 	ctx.JSON(http.StatusOK, datas)
 }
+
+func ShowCategories(ctx *gin.Context){
+	// Get DB connection
+	db, err := database.GetConnection()
+	if err != nil {
+		Error(http.StatusInternalServerError, err.Error())(ctx)
+		return
+	}
+	
+	var datas []database.Category
+	err = db.Select(&datas, "SELECT id, category_name FROM categories") // Use DB#Get for one entry
+	if err != nil {
+		Error(http.StatusBadRequest, err.Error())(ctx)
+		return
+	}
+	ctx.JSON(http.StatusOK, datas)
+}
+
+func ShowTaskCategories(ctx *gin.Context){
+	// Get DB connection
+	db, err := database.GetConnection()
+	if err != nil {
+		Error(http.StatusInternalServerError, err.Error())(ctx)
+		return
+	}
+	
+	var datas []database.TaskCategory
+	err = db.Select(&datas, "SELECT task_id, category_id FROM task_category") // Use DB#Get for one entry
+	if err != nil {
+		Error(http.StatusBadRequest, err.Error())(ctx)
+		return
+	}
+	ctx.JSON(http.StatusOK, datas)
+}

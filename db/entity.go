@@ -26,3 +26,13 @@ type Ownership struct {
 	User_id uint64 `db:"user_id"`
 	Task_id uint64 `db:"task_id"`
 }
+
+type Category struct {
+	ID        uint64   `db:"id"`
+	CategoryName string `db:"category_name"`
+}
+
+type TaskCategory struct {
+	Task_id  uint `db:"task_id"`
+	Category_id uint `db:"category_id"`
+}
