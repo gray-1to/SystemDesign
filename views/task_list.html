@@ -6,6 +6,8 @@
     <input type="checkbox" name="is_done" value="checked" {{ if .IsDone }}checked{{ end }}><label>完了</label>
     <input type="checkbox" name="is_not_done" value="checked" {{ if .IsNotDone }}checked{{ end }}><label>未完了</label>
     <br>
+    <label>カテゴリ名(複数選択は空白で繋いでください)</label><input type="text" name="category_name" value="{{ .CategoryName }}">
+    <input type="submit" value="検索">
 </form>
 <a href="/task/new"><button>タスク新規登録</button></a>
 <form action="/category/new" method="POST">

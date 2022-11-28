@@ -26,6 +26,7 @@ func TaskList(ctx *gin.Context) {
     kw := ctx.Query("kw")
 		str_is_done := ctx.Query("is_done")
 		str_is_not_done := ctx.Query("is_not_done")
+		space_linked_category_names := ctx.Query("category_name")
 		userID := sessions.Default(ctx).Get("user")
  
     // Get tasks in DB
@@ -60,19 +61,51 @@ func TaskList(ctx *gin.Context) {
         return
     }
 
+		var category_proper_tasks []database.Task
+		// judge category
+		if space_linked_category_names != "" {
+			var category_ids []int
+			category_names := strings.Split(space_linked_category_names, " ")
+			// 各カテゴリに対してタスクがカテゴリを持つかチェック
+			for _, category_name := range category_names{
+				var category_id int
+				err = db.Get(&category_id, "SELECT id FROM categories WHERE category_name = ?",category_name)
+				if err != nil {
+						Error(http.StatusInternalServerError, err.Error())(ctx)
+						return
+				}
+				category_ids = append(category_ids, category_id)
+			}
+			// 各タスクをチェック
+			for _, task := range tasks{
+				var hit_num_sum int
+				for _, category_id := range category_ids{
+					var hit_num int
+					err = db.Get(&hit_num, "SELECT COUNT(*) FROM task_category WHERE task_id = ? AND category_id = ?", task.ID, category_id)
+					hit_num_sum += hit_num
+				}
+				if hit_num_sum > 0{
+					// 該当タスクが該当カテゴリを持っていた場合
+					category_proper_tasks = append(category_proper_tasks, task)
+				}
+			} 
+		}else{
+			category_proper_tasks = tasks
+		}
+
 		// judge danger deadline
 		// clac rest day
 		var danger_deadline []bool
 		var rest_day []int
 		now_time := time.Now()
-		for task_index := range tasks{
-			var diff = tasks[task_index].Deadline.Sub(now_time)
+		for task_index := range category_proper_tasks{
+			var diff = category_proper_tasks[task_index].Deadline.Sub(now_time)
 			danger_deadline = append(danger_deadline, diff.Hours() < 5*24)
 			rest_day = append(rest_day, int(diff.Hours() / 24 + 1))
 		}
 
 		// pagenation
-		tasks_length := len(tasks)
+		tasks_length := len(category_proper_tasks)
 		str_page_id := ctx.Param("page_id")
 		var page_id int 
 		if str_page_id != ""{
@@ -99,14 +132,14 @@ func TaskList(ctx *gin.Context) {
 
 		start_id := page_id * 5
 		next_start_id := int(math.Min(float64((page_id + 1) * 5), float64(tasks_length)))
-		tasks = tasks[start_id:next_start_id]
+		category_proper_tasks = category_proper_tasks[start_id:next_start_id]
 		has_pre_page := page_id > 0
 		pre_page_id := page_id - 1
 		has_next_page := (tasks_length - start_id) > 5
 		next_page_id := page_id + 1
 
     // Render tasks
-    ctx.HTML(http.StatusOK, "task_list.html", gin.H{"Title": "Task list", "Tasks": tasks, "Kw": kw, "IsDone": str_is_done == "checked", "IsNotDone": str_is_not_done == "checked", "DangerDeadline": danger_deadline, "RestDay": rest_day, "PageId": page_id, "HasPrePage": has_pre_page, "PrePageId": pre_page_id, "HasNextPage": has_next_page, "NextPageId": next_page_id})
+    ctx.HTML(http.StatusOK, "task_list.html", gin.H{"Title": "Task list", "Tasks": category_proper_tasks, "Kw": kw, "IsDone": str_is_done == "checked", "IsNotDone": str_is_not_done == "checked", "DangerDeadline": danger_deadline, "RestDay": rest_day, "PageId": page_id, "HasPrePage": has_pre_page, "PrePageId": pre_page_id, "HasNextPage": has_next_page, "NextPageId": next_page_id})
 }
 
 // ShowTask renders a task with given ID
