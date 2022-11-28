@@ -72,11 +72,18 @@ func TaskList(ctx *gin.Context) {
 
 		// pagenation
 		tasks_length := len(tasks)
-		page_id, err := strconv.Atoi(ctx.Param("page_id"))
-		if err != nil {
-				Error(http.StatusBadRequest, err.Error())(ctx)
-				return
+		str_page_id := ctx.Param("page_id")
+		var page_id int 
+		if str_page_id == ""{
+			page_id = 0
+		}else{
+			page_id, err = strconv.Atoi(str_page_id)
+			if err != nil {
+					Error(http.StatusBadRequest, err.Error())(ctx)
+					return
+			}
 		}
+
 		start_id := page_id * 5
 		next_start_id := int(math.Min(float64((page_id + 1) * 5), float64(tasks_length)))
 		tasks = tasks[start_id:next_start_id]
