@@ -91,7 +91,7 @@ func RegisterUser(ctx *gin.Context) {
 const userkey = "user"
 
 func ShowLoginForm(ctx *gin.Context){
-	ctx.HTML(http.StatusBadRequest, "login.html", gin.H{"Title": "Login"})
+	ctx.HTML(http.StatusFound, "login.html", gin.H{"Title": "Login"})
 }
  
 func Login(ctx *gin.Context) {
@@ -211,4 +211,45 @@ func DeleteUser(ctx *gin.Context){
 	session.Save()
 	// Redirect to /list
 	ctx.Redirect(http.StatusFound, "/")
+}
+
+func ShowChangeUserInfoForm(ctx *gin.Context){
+	ctx.HTML(http.StatusFound, "change_user_form.html", gin.H{"Title": "ChangeUserInfo"})
+}
+
+func ChangeUserInfo(ctx *gin.Context){
+	user_id := sessions.Default(ctx).Get("user")
+	// フォームデータの受け取り
+	username := ctx.PostForm("username")
+	password := ctx.PostForm("password")
+	password_confirm := ctx.PostForm("password_confirm")
+	switch {
+	case username == "":
+			ctx.HTML(http.StatusBadRequest, "change_user_form.html", gin.H{"Title": "ChangeUserInfo", "Error": "Username is not provided", "Username": username, "Password": password, "PasswordConfirm": password_confirm})
+			return
+	case password == "":
+			ctx.HTML(http.StatusBadRequest, "change_user_form.html", gin.H{"Title": "ChangeUserInfo", "Error": "Password is not provided", "Username": username, "Password": password, "PasswordConfirm": password_confirm})
+			return
+	case password != password_confirm:
+		ctx.HTML(http.StatusBadRequest, "change_user_form.html", gin.H{"Title": "ChangeUserInfo", "Error": "Password confirmation is not same ", "Username": username, "Password": password, "PasswordConfirm": password_confirm})
+		return
+	case utf8.RuneCountInString(password) < 6:
+		ctx.HTML(http.StatusBadRequest, "change_user_form.html", gin.H{"Title": "ChangeUserInfo", "Error": "Password is too short. Set Password more than 5 chars.", "Username": username, "Password": password, "PasswordConfirm": password_confirm})
+		return
+	}
+	// Get DB connection
+	db, err := database.GetConnection()
+	if err != nil {
+			Error(http.StatusInternalServerError, err.Error())(ctx)
+			return
+	}
+	tx := db.MustBegin()
+	_, err =tx.Exec("UPDATE users SET name = ?, password = ? WHERE id = ?", username, hash(password), user_id)
+	if err != nil {
+		tx.Rollback()
+		Error(http.StatusInternalServerError, err.Error())(ctx)
+		return
+	}
+	tx.Commit()
+	ctx.Redirect(http.StatusFound, "/list/0")
 }

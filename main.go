@@ -71,6 +71,9 @@ func main() {
 	engine.GET("/logout", service.Logout)
 	// ユーザー削除
 	engine.GET("/delete_user", service.DeleteUser)
+	// ユーザー情報変更
+	engine.GET("/user/change", service.ShowChangeUserInfoForm)
+	engine.POST("/user/change", service.ChangeUserInfo)
 
 	// 管理者
 	engine.GET("/admin/login", service.ShowAdminLoginPage)
