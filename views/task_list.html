@@ -1,5 +1,6 @@
 {{ template "header" . }}
 <h1>List of tasks</h1>
+<h2>{{ .UserId }} : {{ .UserName }}様、ようこそ！</h2>
 <form action="/list/0" method="GET">
     <label>タスク名</label><input type="text" name="kw" value="{{ .Kw }}">
     <br>

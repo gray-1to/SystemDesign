@@ -12,7 +12,9 @@
     <br>
     <label>Deadline</label><input type="date" name="deadline" value="{{ .Deadline }}" required>
     <br>
-    <label>Category(複数選択は空白で繋いでください)</label><input type="text" name="category_name" value="{{ .CategoryName }}" required>
+    <label>Category(複数選択は空白で繋いでください)</label><input type="text" name="category_name" value="{{ .CategoryName }}">
+    <br>
+    <label>Share(このタスクを共有したいユーザーのIDを空白で繋いでください)</label><input type="text" name="to_share_user_ids" value="{{ .ShareUserIds }}">
     <br>
     <button onclick="confirm_update({{ .Task.ID }})">登録</button>
     <a href="/task/{{ .Task.ID }}"><button type="button">戻る</button></a>

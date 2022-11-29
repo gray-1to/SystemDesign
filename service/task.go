@@ -138,8 +138,17 @@ func TaskList(ctx *gin.Context) {
 		has_next_page := (tasks_length - start_id) > 5
 		next_page_id := page_id + 1
 
+		// // User Information
+		// var user_name string
+		// err = db.Get(&user_name, "SELECT name FROM users WHERE id = ?",userID.(uint64))
+		// if err != nil {
+		// 		Error(http.StatusInternalServerError, err.Error())(ctx)
+		// 		return
+		// }
+		user_name := "Foo"
+
     // Render tasks
-    ctx.HTML(http.StatusOK, "task_list.html", gin.H{"Title": "Task list", "Tasks": category_proper_tasks, "Kw": kw, "IsDone": str_is_done == "checked", "IsNotDone": str_is_not_done == "checked", "DangerDeadline": danger_deadline, "RestDay": rest_day, "PageId": page_id, "HasPrePage": has_pre_page, "PrePageId": pre_page_id, "HasNextPage": has_next_page, "NextPageId": next_page_id})
+    ctx.HTML(http.StatusOK, "task_list.html", gin.H{"Title": "Task list", "Tasks": category_proper_tasks, "Kw": kw, "IsDone": str_is_done == "checked", "IsNotDone": str_is_not_done == "checked", "DangerDeadline": danger_deadline, "RestDay": rest_day, "PageId": page_id, "HasPrePage": has_pre_page, "PrePageId": pre_page_id, "HasNextPage": has_next_page, "NextPageId": next_page_id, "UserId": userID, "UserName": user_name})
 }
 
 // ShowTask renders a task with given ID
@@ -260,7 +269,7 @@ func RegisterTask(ctx *gin.Context) {
 			Error(http.StatusInternalServerError, err.Error())(ctx)
 			return
 	}
-	if category_exist{
+	if category_exist && space_linked_category_names != ""{
 		category_names := strings.Split(space_linked_category_names, " ")
 		for _, category_name := range category_names{
 			var category_id int
@@ -374,14 +383,16 @@ func UpdateTask(ctx *gin.Context){
 		return
 	}
 	// Get task deadline
-	space_linked_category_names, category_exist := ctx.GetPostForm("category_name")
-
-	// Get task comment
 	deadline, exist := ctx.GetPostForm("deadline")
 	if !exist {
 			Error(http.StatusBadRequest, "No deadline is given")(ctx)
 			return
 	}
+	// Get task category
+	space_linked_category_names, category_exist := ctx.GetPostForm("category_name")
+
+	// Get share id
+	space_linked_user_ids, to_share_user_ids_exist := ctx.GetPostForm("to_share_user_ids")
 
 	// Get DB connection
 	db, err := database.GetConnection()
@@ -404,7 +415,8 @@ func UpdateTask(ctx *gin.Context){
 		Error(http.StatusInternalServerError, err.Error())(ctx)
 		return
 	}
-	if category_exist{
+
+	if category_exist && space_linked_category_names != ""{
 		category_names := strings.Split(space_linked_category_names, " ")
 		for _, category_name := range category_names{
 			var category_id int
@@ -415,6 +427,18 @@ func UpdateTask(ctx *gin.Context){
 				return
 			}
 			_, err = tx.Exec("INSERT INTO task_category (task_id, category_id) VALUES (?, ?)", task_id, category_id)
+			if err != nil {
+				tx.Rollback()
+				Error(http.StatusInternalServerError, err.Error())(ctx)
+				return
+			}
+		}
+	}
+
+	if to_share_user_ids_exist && space_linked_user_ids != ""{
+		user_ids := strings.Split(space_linked_user_ids, " ")
+		for _, user_id := range user_ids{
+			_, err = tx.Exec("INSERT INTO ownerships (task_id, user_id) VALUES (?, ?)", task_id, user_id)
 			if err != nil {
 				tx.Rollback()
 				Error(http.StatusInternalServerError, err.Error())(ctx)
@@ -450,3 +474,30 @@ func DeleteTask(ctx *gin.Context) {
 	// Redirect to /list
 	ctx.Redirect(http.StatusFound, "/list/0")
 }
+
+// func ShareTask(ctx *gin.Context){
+// 	task_id := ctx.Param("task_id")
+// 	space_linked_user_ids, exist := ctx.GetPostForm("to_share_user_ids")
+
+// 	// Get DB connection
+// 	db, err := database.GetConnection()
+// 	if err != nil {
+// 			Error(http.StatusInternalServerError, err.Error())(ctx)
+// 			return
+// 	}
+// 	if exist {
+// 		user_ids := strings.Split(space_linked_user_ids, " ")
+// 		tx := db.MustBegin()
+// 		for user_id := range user_ids{
+// 			_, err = tx.Exec("INSERT INTO ownerships (task_id, user_id) VALUES (?, ?)", task_id, user_id)
+// 			if err != nil {
+// 				tx.Rollback()
+// 				Error(http.StatusInternalServerError, err.Error())(ctx)
+// 				return
+// 			}
+// 		}
+// 		tx.Commit()
+// 	}
+// 	path := "/task/" + task_id
+// 	ctx.Redirect(http.StatusFound, path)
+// }

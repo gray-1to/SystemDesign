@@ -123,7 +123,7 @@ func Login(ctx *gin.Context) {
     session.Set(userkey, user.ID)
     session.Save()
  
-    ctx.Redirect(http.StatusFound, "/list")
+    ctx.Redirect(http.StatusFound, "/list/0")
 }
 
 func LoginCheck(ctx *gin.Context) {
