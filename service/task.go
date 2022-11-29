@@ -465,39 +465,23 @@ func DeleteTask(ctx *gin.Context) {
 			Error(http.StatusInternalServerError, err.Error())(ctx)
 			return
 	}
+
+	tx := db.MustBegin()
 	// Delete the task from DB
-	_, err = db.Exec("DELETE FROM tasks WHERE id=?", id)
+	_, err = tx.Exec("DELETE FROM tasks WHERE id=?", id)
 	if err != nil {
+		tx.Rollback()
 			Error(http.StatusInternalServerError, err.Error())(ctx)
 			return
 	}
+	_, err = tx.Exec("DELETE FROM ownerships WHERE task_id = ?", id)
+	if err != nil {
+		tx.Rollback()
+			Error(http.StatusInternalServerError, err.Error())(ctx)
+			return
+	}
+	tx.Commit()
+	
 	// Redirect to /list
 	ctx.Redirect(http.StatusFound, "/list/0")
 }
-
-// func ShareTask(ctx *gin.Context){
-// 	task_id := ctx.Param("task_id")
-// 	space_linked_user_ids, exist := ctx.GetPostForm("to_share_user_ids")
-
-// 	// Get DB connection
-// 	db, err := database.GetConnection()
-// 	if err != nil {
-// 			Error(http.StatusInternalServerError, err.Error())(ctx)
-// 			return
-// 	}
-// 	if exist {
-// 		user_ids := strings.Split(space_linked_user_ids, " ")
-// 		tx := db.MustBegin()
-// 		for user_id := range user_ids{
-// 			_, err = tx.Exec("INSERT INTO ownerships (task_id, user_id) VALUES (?, ?)", task_id, user_id)
-// 			if err != nil {
-// 				tx.Rollback()
-// 				Error(http.StatusInternalServerError, err.Error())(ctx)
-// 				return
-// 			}
-// 		}
-// 		tx.Commit()
-// 	}
-// 	path := "/task/" + task_id
-// 	ctx.Redirect(http.StatusFound, path)
-// }
