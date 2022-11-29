@@ -1,6 +1,7 @@
 {{ template "header" . }}
 <h1>List of tasks</h1>
-<h2>{{ .UserId }} : {{ .UserName }}様、ようこそ！</h2>
+<h2>ID:{{ .UserId }} : {{ .UserName }}様、ようこそ！</h2>
+<h4>タスク検索</h4>
 <form action="/list/0" method="GET">
     <label>タスク名</label><input type="text" name="kw" value="{{ .Kw }}">
     <br>
@@ -10,12 +11,16 @@
     <label>カテゴリ名(複数選択は空白で繋いでください)</label><input type="text" name="category_name" value="{{ .CategoryName }}">
     <input type="submit" value="検索">
 </form>
+<br>
 <a href="/task/new"><button>タスク新規登録</button></a>
+<br>
+<br>
 <form action="/category/new" method="POST">
     <label>カテゴリー新規登録</label>
     <input type="text" name="category_name">
     <input type="submit" value="カテゴリを追加">
 </form>
+<br>
 {{ if not .Tasks }}
 <p>登録データがありません．</p>
 {{ else }}

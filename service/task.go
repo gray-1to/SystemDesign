@@ -138,14 +138,13 @@ func TaskList(ctx *gin.Context) {
 		has_next_page := (tasks_length - start_id) > 5
 		next_page_id := page_id + 1
 
-		// // User Information
-		// var user_name string
-		// err = db.Get(&user_name, "SELECT name FROM users WHERE id = ?",userID.(uint64))
-		// if err != nil {
-		// 		Error(http.StatusInternalServerError, err.Error())(ctx)
-		// 		return
-		// }
-		user_name := "Foo"
+		// User Information
+		var user_name string
+		err = db.Get(&user_name, "SELECT name FROM users WHERE id = ?",userID)
+		if err != nil {
+				Error(http.StatusInternalServerError, err.Error())(ctx)
+				return
+		}
 
     // Render tasks
     ctx.HTML(http.StatusOK, "task_list.html", gin.H{"Title": "Task list", "Tasks": category_proper_tasks, "Kw": kw, "IsDone": str_is_done == "checked", "IsNotDone": str_is_not_done == "checked", "DangerDeadline": danger_deadline, "RestDay": rest_day, "PageId": page_id, "HasPrePage": has_pre_page, "PrePageId": pre_page_id, "HasNextPage": has_next_page, "NextPageId": next_page_id, "UserId": userID, "UserName": user_name})
@@ -481,7 +480,7 @@ func DeleteTask(ctx *gin.Context) {
 			return
 	}
 	tx.Commit()
-	
+
 	// Redirect to /list
 	ctx.Redirect(http.StatusFound, "/list/0")
 }
