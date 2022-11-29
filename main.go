@@ -72,9 +72,14 @@ func main() {
 	// ユーザー削除
 	engine.GET("/delete_user", service.DeleteUser)
 
+	// 管理者
+	engine.GET("/admin/login", service.ShowAdminLoginPage)
+	engine.POST("/admin/login", service.AdminLogin)
+	engine.GET("/admin/logout", service.AdminLogout)
+
 	// データベース
 	databaseGroup := engine.Group("/database")
-	databaseGroup.Use()
+	databaseGroup.Use(service.AdminChech)
 	{
 		databaseGroup.GET("/users", service.ShowUsers)
 		databaseGroup.GET("/tasks", service.ShowTasks)
@@ -82,6 +87,7 @@ func main() {
 		databaseGroup.GET("/categories", service.ShowCategories)
 		databaseGroup.GET("/task_categories", service.ShowTaskCategories)
 	}
+
 
 	// start server
 	engine.Run(fmt.Sprintf(":%d", port))

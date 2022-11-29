@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	database "todolist.go/db"
+	"github.com/gin-contrib/sessions"
 )
 
 func ShowUsers(ctx *gin.Context){
@@ -90,4 +91,43 @@ func ShowTaskCategories(ctx *gin.Context){
 		return
 	}
 	ctx.JSON(http.StatusOK, datas)
+}
+
+func ShowAdminLoginPage(ctx *gin.Context){
+	ctx.HTML(http.StatusOK, "admin_login.html", gin.H{"Title": "Login"})
+}
+
+func AdminLogin(ctx *gin.Context){
+	username := ctx.PostForm("username")
+	password := ctx.PostForm("password")
+	if(username == "admin") && (password == "password"){
+		// セッションの保存
+		session := sessions.Default(ctx)
+		session.Set("admin_login", true)
+		session.Save()
+
+		ctx.HTML(http.StatusOK, "database_list.html", gin.H{"Title": "Login"})
+		return
+	}else{
+		ctx.HTML(http.StatusBadRequest, "admin_login.html", gin.H{"Title": "Login", "Username": username, "Error": "Incorrect password"})
+		return
+	}
+}
+
+func AdminLogout(ctx *gin.Context){
+	// セッションの保存
+	session := sessions.Default(ctx)
+	session.Set("admin_login", false)
+	session.Save()
+	ctx.Redirect(http.StatusFound, "/")
+}
+
+func AdminChech(ctx *gin.Context){
+	admin_login := sessions.Default(ctx).Get("admin_login")
+	if admin_login != nil && admin_login.(bool){
+		ctx.Next()
+	}else{
+		ctx.Redirect(http.StatusFound, "/admin/login")
+		ctx.Abort()
+	}
 }

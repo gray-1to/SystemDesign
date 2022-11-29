@@ -161,7 +161,6 @@ func LoginCheck(ctx *gin.Context) {
 				ctx.Next()
 			}
 		}
-			
 	}
 }
 
